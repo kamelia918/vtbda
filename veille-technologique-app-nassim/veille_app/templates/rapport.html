@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport d'Analyse</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .article {
+            border-left: 4px solid #007BFF;
+            padding-left: 10px;
+            margin-bottom: 20px;
+        }
+        .article a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .article a:hover {
+            text-decoration: underline;
+        }
+        .graph {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .graph img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rapport d'Analyse</h1>
+    <h1>{{ rapport.titre }}</h1>
+    <p>Date de création : {{ rapport.date_creation|date:"d/m/Y H:i" }}</p>
+
+
+    <!-- Section 1 : Mots-Clés les Plus Fréquents -->
+    <!-- Section 1 : Mots-Clés les Plus Fréquents -->
+{% if rapport.top_keywords %}
+<div class="section">
+    <h2>Mots-Clés les Plus Fréquents</h2>
+    <ul>
+        {% for keyword, count in rapport.top_keywords %}
+            <li><strong>{{ keyword }}</strong> ({{ count }} occurrences)</li>
+        {% endfor %}
+    </ul>
+</div>
+{% else %}
+<div class="section">
+    <p>Aucun mot-clé fréquent trouvé.</p>
+</div>
+{% endif %}
+    <!-- Section 2 : Articles les Plus Pertinents -->
+    {% if articles %}
+    <div class="section">
+        <h2>Articles les Plus Pertinents</h2>
+        {% for article in articles %}
+            <div class="article">
+                <h3>{{ article.title }}</h3>
+                <p><strong>Auteur :</strong> {{ article.author }}</p>
+                <p><strong>Lien :</strong> <a href="{{ article.link }}" target="_blank">{{ article.link }}</a></p>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Section 3 : Résumé Global -->
+    {% if global_summary %}
+    <div class="section">
+        <h2>Résumé Global</h2>
+        <p>{{ global_summary }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Section 4 : Remarques -->
+    {% if remarks %}
+    <div class="section">
+        <h2>Remarques</h2>
+        <p>{{ remarks }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Section 5 : Graphiques -->
+    {% if wordcloud_image or bar_chart_image %}
+    <div class="section">
+        <h2>Graphiques</h2>
+        {% if wordcloud_image %}
+        <div class="graph">
+            <h3>Nuage de Mots</h3>
+            <img src="data:image/png;base64,{{ wordcloud_image }}" alt="Nuage de Mots">
+        </div>
+        {% endif %}
+        {% if bar_chart_image %}
+        <div class="graph">
+            <h3>Mots-Clés les Plus Fréquents</h3>
+            <img src="data:image/png;base64,{{ bar_chart_image }}" alt="Graphique en Barres">
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="section">
+        <p>Aucun graphique disponible.</p>
+    </div>
+    {% endif %}
+</body>
+</html>
