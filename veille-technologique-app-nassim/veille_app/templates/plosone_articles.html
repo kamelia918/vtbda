@@ -1,217 +1,571 @@
-{% extends "layouts/base.html" %}
-{% load i18n static %}
-
-{% block extrastyle %}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-{% endblock %}
-
-{% block content %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plosone Articles</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f9;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
-        th {
-            background-color: #f1f1f1;
-            color: #333;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .buttons button {
-            padding: 5px 10px;
-            margin-right: 5px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            background-color: #4CAF50;
-            color: white;
-            font-size: 14px;
-            border-radius: 3px;
-        }
-        .buttons button.delete-button {
-            background-color: #f44336;
-        }
-        .buttons button:disabled {
-            background-color: #888;
-            cursor: not-allowed;
-        }
-        a {
-            color: #4CAF50;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        .no-articles {
-            text-align: center;
-            margin-top: 20px;
-            color: #777;
-        }
-        .summary {
-            display: none;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            margin-top: 5px;
-            color: #555;
-        }
-    </style>
-    <script>
-        function saveArticle(id, title, summary, authors, link, published, content) {
-            fetch('/save_article/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': getCSRFToken(),
-                },
-                body: new URLSearchParams({
-                    title: title,
-                    summary: summary,
-                    authors: authors,
-                    link: link,
-                    published: published,
-                    content: content,
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert(data.message);
-                const saveButton = document.querySelector(`#article-${id} .save-button`);
-                saveButton.disabled = true;
-                saveButton.textContent = "Saved";
-            });
+  <meta charset="UTF-8" />
+  <title>Plosone Articles</title>
+
+  <!-- Fonts + Icons -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+
+  <style>
+    /* Variables CSS */
+    :root {
+      --primary-color: #6366f1; 
+      --text-color: #1e293b;
+      --bg-color: #f8fafc;
+      --card-bg: #fff;
+      --border-color: #e2e8f0;
+      --secondary-bg: #f1f5f9;
+      --highlight-bg: #eef2ff; 
+      --select-bg: #fff;
+      --select-border: #ccc;
+      --select-hover-border: var(--primary-color);
+      --select-arrow: #9ca3af;
+    }
+
+    /* Styles Généraux */
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Header */
+    .board-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .board-title {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .board-title i {
+      font-size: 1.75rem;
+      color: var(--primary-color);
+    }
+    .board-title h1 {
+      font-size: 1.875rem;
+      font-weight: 600;
+      margin: 0;
+      color: #0f172a;
+    }
+
+    /* Formulaire de Recherche */
+    .search-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      align-items: flex-end;
+    }
+
+    .search-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .search-field label {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    /* Inputs et Select */
+    .search-field input[type="text"],
+    .search-field input[type="date"],
+    .search-field select {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      background-color: var(--select-bg);
+      min-width: 180px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-field input[type="text"]:focus,
+    .search-field input[type="date"]:focus,
+    .search-field select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px var(--highlight-bg);
+      outline: none;
+    }
+
+    /* Icône de recherche */
+    .search-field.mot-cle {
+      position: relative;
+    }
+    .search-field.mot-cle input[type="text"] {
+      padding-left: 2rem; /* espace pour l'icône */
+    }
+    .search-field.mot-cle::before {
+      /*content: "\f002"; /* icône de recherche Font Awesome */
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      pointer-events: none;
+    }
+
+    /* Icône de calendrier */
+    .search-field input[type="date"] {
+      position: relative;
+      padding-right: 2rem; 
+    }
+    .search-field input[type="date"]::-webkit-calendar-picker-indicator {
+      opacity: 0;
+      cursor: pointer;
+      position: relative;
+      z-index: 2;
+    }
+    .search-field input[type="date"]::after {
+      content: "\f133"; /* icône de calendrier Font Awesome */
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: #9ca3af;
+    }
+
+    /* Bouton de Recherche */
+    .search-button {
+      background-color: var(--primary-color);
+      color: #fff;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .search-button:hover {
+      background-color: #4338ca; 
+    }
+
+    /* Style du Tableau */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: var(--card-bg);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    thead {
+      background-color: var(--secondary-bg);
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+    th {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    tbody tr:nth-child(even) {
+      background-color: var(--secondary-bg);
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Boutons dans le Tableau */
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .buttons button {
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      transition: background-color 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .save-button {
+      background-color: #4caf50; /* vert */
+      color: #fff;
+    }
+    .save-button:hover:not(:disabled) {
+      background-color: #43a047;
+    }
+    .delete-button {
+      background-color: #f44336; /* rouge */
+      color: #fff;
+    }
+    .delete-button:hover {
+      background-color: #e53935;
+    }
+    button:disabled {
+      background-color: #888;
+      cursor: not-allowed;
+      border-color: #888;
+    }
+
+    /* Bouton View Summary */
+    .summary-button {
+      background-color: var(--primary-color);
+      color: #fff;
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      border: none;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: background-color 0.2s;
+    }
+    .summary-button:hover {
+      background-color: #4338ca; 
+    }
+
+    /* Style des Links */
+    a {
+      color: var(--primary-color);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* Message Aucun Article */
+    .no-articles {
+      text-align: center;
+      margin-top: 20px;
+      color: #777;
+    }
+
+    /* Contenu du Résumé */
+    .summary {
+      display: none;
+      padding: 10px;
+      background-color: #f9fafb;
+      border: 1px solid var(--border-color);
+      margin-top: 5px;
+      color: #555;
+      border-radius: 4px;
+    }
+
+    /* **Nouveau CSS pour Améliorer le Dropdown "Assign Task"** */
+
+    /* Wrapper pour le select */
+    .custom-select-container {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+
+    /* Style personnalisé pour le select */
+    .custom-select {
+      appearance: none;
+      width: 100%;
+      padding: 0.5rem 2.5rem 0.5rem 0.75rem; /* espace pour l'icône */
+      border: 1px solid var(--select-border);
+      border-radius: 6px;
+      background-color: var(--select-bg);
+      font-size: 0.9rem;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    /* Effet au survol */
+    .custom-select:hover {
+      border-color: var(--select-hover-border);
+    }
+
+    /* Effet au focus */
+    .custom-select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px var(--highlight-bg);
+      outline: none;
+    }
+
+    /* Icône de flèche personnalisée */
+    .custom-select-container::after {
+      content: "\f078"; /* Icône de flèche vers le bas Font Awesome */
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      position: absolute;
+      top: 50%;
+      right: 0.75rem;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--select-arrow);
+      font-size: 0.8rem;
+    }
+
+    /* Style pour les options */
+    .custom-select option {
+      padding: 0.5rem;
+    }
+
+    /* Responsivité */
+    @media (max-width: 768px) {
+      .search-form {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-field, .custom-select-container {
+        width: 100%;
+      }
+    }
+
+  </style>
+  <script>
+    // Fonction pour obtenir le token CSRF
+    function getCSRFToken() {
+      const csrfTokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+      return csrfTokenElement ? csrfTokenElement.value : '';
+    }
+
+    // Fonction pour sauvegarder un article
+    function saveArticle(taskId, title, summary, authors, link, published, content, articleId) {
+      const path = window.location.pathname;
+  
+  // Renommer la variable pour éviter le conflit
+  const extractedTaskId = path.split('/')[2];  // Cela prend l'élément à l'index 2, soit "9"
+  
+  // Afficher l'ID dans la console
+  console.log("hello");
+  console.log("ID de la tâche:", extractedTaskId);
+        if (!taskId) {
+            taskId = extractedTaskId
         }
 
-        function deleteArticle(id, title, link) {
-            fetch('/delete_article/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': getCSRFToken(),
-                },
-                body: new URLSearchParams({
-                    title: title,
-                    link: link,
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert(data.message);
-                document.getElementById(`article-${id}`).remove();
-            });
-        }
+        fetch(`/save_article/${taskId}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    body: new URLSearchParams({
+      title: title,
+      summary: summary,
+      authors: authors,
+      link: link,
+      published: published,
+      content: content,
+    }),
+  })
+  .then(response => response.json())
+  .then(data => {
+    alert(data.message);
 
-        function toggleSummary(id) {
-            const summary = document.getElementById(`summary-${id}`);
-            const button = document.getElementById(`summary-button-${id}`);
-            if (summary.style.display === "none") {
-                summary.style.display = "block";
-                button.textContent = "Hide Summary";
-            } else {
-                summary.style.display = "none";
-                button.textContent = "View Summary";
-            }
-        }
+    // ICI : on récupère le bouton via l'ID de l'article
+    // et non l'ID de la tâche
+    const saveButton = document.querySelector(`#article-${articleId} .save-button`);
 
-        function getCSRFToken() {
-            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    // Puis on le met à jour
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.textContent = "Saved";
+    }
+  });
+}
+    // Fonction pour supprimer un article
+    function deleteArticle(id, title, link) {
+      fetch('/delete_article/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCSRFToken(),
+        },
+        body: new URLSearchParams({
+          title: title,
+          link: link,
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.message) {
+          alert(data.message);
+          document.getElementById(`article-${id}`).remove();
+        } else {
+          alert('Une erreur est survenue lors de la suppression de l\'article.');
         }
-    </script>
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Une erreur est survenue lors de la suppression de l\'article.');
+      });
+    }
+
+    // Fonction pour basculer l'affichage du résumé
+    function toggleSummary(id) {
+      const summary = document.getElementById(`summary-${id}`);
+      const button = document.getElementById(`summary-button-${id}`);
+      if (summary.style.display === "none") {
+        summary.style.display = "block";
+        button.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Summary';
+      } else {
+        summary.style.display = "none";
+        button.innerHTML = '<i class="fas fa-eye"></i> View Summary';
+      }
+    }
+  </script>
 </head>
 <body>
-    <h1>Plosone Articles</h1>
-    <form method="get">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Rechercher</button>
+  <div class="container">
+    <div class="board-header">
+      <div class="board-title">
+        <i class="fa-solid fa-newspaper"></i>
+        <h1>Plosone Articles</h1>
+      </div>
+    </div>
+
+    <!-- Formulaire de Recherche -->
+    <form method="get" class="search-form">
+      {% csrf_token %}
+      <div class="search-field mot-cle">
+        <label for="id_mot_cle">Mot-clé</label>
+        {{ form.mot_cle }}
+      </div>
+
+      <div class="search-field">
+        <label for="id_date_debut">Date de début</label>
+        {{ form.date_debut }}
+      </div>
+
+      <div class="search-field">
+        <label for="id_date_fin">Date de fin</label>
+        {{ form.date_fin }}
+      </div>
+
+      <!-- Bouton de Recherche -->
+      <button type="submit" class="search-button">
+        <i class="fas fa-search"></i>
+        Rechercher
+      </button>
     </form>
-    
+
+    <!-- Tableau des Articles -->
     {% if articles %}
-    <table>
+      <table>
         <thead>
-            <tr>
-                <th>Actions</th>
-                <th>Title</th>
-                <th>Authors</th>
-                <th>Published</th>
-                <th>Link</th>
-                <th>Summary</th>
-            </tr>
+          <tr>
+            <th>Actions</th>
+            <th>Title</th>
+            <th>Authors</th>
+            <th>Published</th>
+            <th>Link</th>
+            <th>Summary</th>
+            <th>Assign Task</th> <!-- Nouvelle colonne pour assigner la tâche -->
+          </tr>
         </thead>
         <tbody>
-            {% for article in articles %}
-            <tr id="article-{{ forloop.counter }}">
-                <td class="buttons">
-                    <button 
-                        class="save-button" 
-                        onclick="saveArticle(
-                            {{ forloop.counter }},
-                            '{{ article.title|escapejs }}',
-                            '{{ article.summary|escapejs }}',
-                            '{{ article.authors|join:", "|escapejs }}',
-                            '{{ article.link }}',
-                            '{{ article.published }}',
-                            '{{ article.content|escapejs }}'
-                        )" 
-                        {% if article.is_saved %} disabled {% endif %}
-                    >
-                        {% if article.is_saved %} Saved {% else %} Save {% endif %}
-                    </button>
-                    <button 
-                        class="delete-button" 
-                        onclick="deleteArticle(
-                            {{ forloop.counter }},
-                            '{{ article.title|escapejs }}',
-                            '{{ article.link }}'
-                        )"
-                    >
-                        Delete
-                    </button>
-                </td>
-                <td>{{ article.title }}</td>
-                <td>{{ article.authors|join:", " }}</td>
-                <td>{{ article.published }}</td>
-                <td><a href="{{ article.link }}" target="_blank">View Article</a></td>
-                <td>
-                    <button 
-                        id="summary-button-{{ forloop.counter }}"
-                        onclick="toggleSummary({{ forloop.counter }}) " >
-                        View Summary
-                    </button>
-                    <div id="summary-{{ forloop.counter }}" class="summary">
-                        {{ article.summary }}
-                    </div>
-                </td>
+          {% for article in articles %}
+            <tr id="article-{{ article.id }}">
+              <td class="buttons">
+                <button
+                class="save-button"
+                onclick="saveArticle(
+                  document.getElementById('task-select-{{ article.id }}').value,
+                  '{{ article.title|escapejs }}',
+                  '{{ article.summary|escapejs }}',
+                  '{{ article.authors|join:', '|escapejs }}',
+                  '{{ article.link }}',
+                  '{{ article.published }}',
+                  '{{ article.content|escapejs }}',
+                  '{{ article.id }}'
+                )"
+                  {% if article.is_saved %} disabled {% endif %}
+                >
+                  {% if article.is_saved %} Saved {% else %} Save {% endif %}
+                </button>
+                <button
+                  class="delete-button"
+                  onclick="deleteArticle(
+                    '{{ article.id }}',
+                    '{{ article.title|escapejs }}',
+                    '{{ article.link }}'
+                  )"
+                >
+                  <i class="fas fa-trash"></i>
+                  Delete
+                </button>
+              </td>
+              <td>{{ article.title }}</td>
+              <td>{{ article.authors|join:", " }}</td>
+              <td>{{ article.published }}</td>
+              <td>
+                <a href="{{ article.link }}" target="_blank">View Article</a>
+              </td>
+              <td>
+                <button
+                id="summary-button-{{ forloop.counter }}"
+                class="summary-button"
+                onclick="toggleSummary({{ forloop.counter }})"
+              >
+                <i class="fas fa-eye"></i>
+                View Summary
+              </button>
+              <div
+                id="summary-{{ forloop.counter }}"
+                class="summary"
+              >
+                {{ article.summary }}
+              </div>
+              </td>
+              <td>
+                <div class="custom-select-container">
+                  <select id="task-select-{{ article.id }}" class="custom-select">
+                    <option value="">-- Select Task --</option> <!-- Option par défaut -->
+                    {% for task in tasks %}
+                      <option value="{{ task.id }}">{{ task.title }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </td>
             </tr>
-            {% endfor %}
+          {% endfor %}
         </tbody>
-    </table>
+      </table>
     {% else %}
-    <p class="no-articles">Aucun article trouvé. Veuillez ajuster votre recherche.</p>
+      <p class="no-articles">
+        Aucun article trouvé. Veuillez ajuster votre recherche.
+      </p>
     {% endif %}
+  </div>
 </body>
 </html>
-{% endblock %}

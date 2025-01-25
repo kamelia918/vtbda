@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Notes | {{ article.title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Styles globaux */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa; /* Couleur d'arrière-plan douce */
+            color: #333; /* Texte principal */
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #f5eaee; /* Couleur pastel */
+            color: #4d4d4d;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 0 0 16px 16px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            font-size: 22px;
+            color: #5a189a; /* Violet */
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        .card {
+            background-color: #f1f3f5; /* Couleur claire */
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.05), 
+                        inset -2px -2px 5px rgba(255, 255, 255, 0.7);
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            font-size: 18px;
+            color: #0056a8; /* Bleu */
+            margin-bottom: 10px;
+        }
+
+        form textarea, form input[type="text"], form button {
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+
+        form textarea {
+            resize: vertical;
+        }
+
+        form textarea:focus, form input[type="text"]:focus {
+            border-color: #f5eaee;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 86, 168, 0.2);
+        }
+
+        form button {
+            background-color: #f5eaee; /* Bleu principal */
+            color: rgb(62, 58, 58);
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        form button:hover {
+            background-color: #f5eaee; /* Bleu plus clair */
+        }
+
+        .btn-toggle {
+            background-color: #fbbf24; /* Jaune pastel */
+            color: rgb(55, 53, 53);
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 20px;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .btn-toggle:hover {
+            background-color: #f59e0b;
+            box-shadow: 0 4px 10px rgba(251, 191, 36, 0.3);
+        }
+
+        .article-content {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9fafb;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            background-color: #fadae3; /* Pastel */
+            font-size: 14px;
+            color: #6b7280; /* Gris clair */
+            margin-top: 40px;
+            border-radius: 16px 16px 0 0;
+        }
+
+        footer a {
+            color: #0056a8;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Gestion des Notes pour : {{ article.title }}
+    </header>
+    <div class="container">
+        <button class="btn-toggle" onclick="toggleArticleContent()">Afficher le Contenu de l'Article</button>
+        <div class="article-content" id="articleContent">
+            {{ article.content }}
+        </div>
+
+        <div class="card">
+            <h2>Ajouter une Nouvelle Remarque</h2>
+            <form method="POST">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit">Ajouter la Remarque</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Créer un Tableau</h2>
+            <p>Ajoutez des tableaux personnalisés pour organiser vos données liées à cet article.</p>
+            <a href="{% url 'generate_table' article.id %}" class="btn-toggle">Générer un Tableau</a>
+        </div>
+    </div>
+    <footer>
+        © 2025 Analyste VT - Tous droits réservés. <a href="#">Politique de confidentialité</a>
+    </footer>
+
+    <script>
+        function toggleArticleContent() {
+            const articleContent = document.getElementById('articleContent');
+            const toggleButton = document.querySelector('.btn-toggle');
+            if (articleContent.style.display === 'none' || !articleContent.style.display) {
+                articleContent.style.display = 'block';
+                toggleButton.textContent = 'Masquer le Contenu de l\'Article';
+            } else {
+                articleContent.style.display = 'none';
+                toggleButton.textContent = 'Afficher le Contenu de l\'Article';
+            }
+        }
+    </script>
+</body>
+</html>

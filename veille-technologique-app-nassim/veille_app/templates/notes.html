@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes pour {{ article.title }}</title>
+    <style>
+        /* Styles ici */
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Notes pour l'article : {{ article.title }}</h1>
+    </header>
+    <div class="container">
+        <h2>Ajouter une nouvelle remarque</h2>
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Ajouter la remarque</button>
+        </form>
+
+        <h2>Créer un tableau</h2>
+        <a href="{% url 'generate_table' article.id %}" class="btn-link">Générer un tableau</a>
+
+        <h2>Gestion des Notes</h2>
+        <a href="{% url 'article_notes' article.id %}" class="btn-link">Voir toutes les notes</a>
+    </div>
+    <footer>
+        © 2025 - Gestion des Notes. Tous droits réservés.
+    </footer>
+</body>
+</html>

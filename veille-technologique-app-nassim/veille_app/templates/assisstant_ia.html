@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistant IA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f1f1f1;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Assistant IA</h1>
+        <form id="assistant-form">
+            <textarea id="user-message" placeholder="Posez une question ou entrez une commande..." required></textarea>
+            <button type="submit">Envoyer</button>
+        </form>
+        <div id="assistant-response" class="response" style="display: none;"></div>
+    </div>
+    <script>
+        document.getElementById("assistant-form").addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const message = document.getElementById("user-message").value;
+            const responseDiv = document.getElementById("assistant-response");
+
+            responseDiv.style.display = "none"; // Masque la réponse avant d'envoyer la requête
+
+            const response = await fetch("", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": "{{ csrf_token }}", // Ajoutez votre CSRF token
+                },
+                body: new URLSearchParams({ message: message }),
+            });
+
+            const data = await response.json();
+            if (data.response) {
+                responseDiv.textContent = data.response;
+                responseDiv.style.display = "block"; // Affiche la réponse
+            } else {
+                responseDiv.textContent = "Une erreur s'est produite.";
+                responseDiv.style.display = "block";
+            }
+        });
+    </script>
+</body>
+</html>

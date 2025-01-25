@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gérer les Tableaux</title>
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        header {
+            background-color: #f5eaee;
+            color: rgb(67, 64, 64);
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #8b6c85;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        form label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        form input[type="number"],
+        form input[type="text"],
+        form button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        form input:focus {
+            border-color: #f5eaee;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 86, 168, 0.2);
+        }
+        form button {
+            background-color: #f5eaee;
+            color: rgb(100, 96, 96);
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        form button:hover {
+            background-color: #74b6f0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        table th {
+            background-color: #0056a8;
+            color: white;
+            font-weight: bold;
+        }
+        table input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        table input:focus {
+            border-color: #28a745;
+            outline: none;
+            box-shadow: 0 0 5px rgba(40, 167, 69, 0.2);
+        }
+        footer {
+            text-align: center;
+            padding: 10px;
+            margin-top: 30px;
+            background-color: #f4f6f9;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Gérer les Tableaux pour : {{ article.title }}
+    </header>
+    <div class="container">
+        <h1>Gestion des Tableaux pour la Note</h1>
+
+        <!-- Afficher les tableaux existants -->
+        {% if note.tables.all %}
+        <div class="section">
+            <h2>Tableaux existants :</h2>
+            {% for table in note.tables.all %}
+            <h3>Tableau ajouté le {{ table.created_at|date:"d M Y" }}</h3>
+            <table>
+                <thead>
+                    <tr>
+                        {% for col in table.data|json_script:"columns" %}
+                        <th>Col {{ forloop.counter }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table.data|json_script:"rows" %}
+                    <tr>
+                        {% for cell in row %}
+                        <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="section">
+            <h2>Aucun tableau existant pour cette note.</h2>
+        </div>
+        {% endif %}
+
+        <!-- Formulaire pour créer un nouveau tableau -->
+        <h2>Créer les dimensions du tableau</h2>
+        <form method="POST">
+            {% csrf_token %}
+            <label for="rows">Nombre de lignes :</label>
+            <input type="number" name="rows" id="rows" min="1" required>
+            <label for="columns">Nombre de colonnes :</label>
+            <input type="number" name="columns" id="columns" min="1" required>
+            <button type="submit">Créer le tableau</button>
+        </form>
+        
+        {% if table_data %}
+        <h2>Remplissez le tableau</h2>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="rows" value="{{ rows }}">
+            <input type="hidden" name="columns" value="{{ columns }}">
+            <table>
+                {% for row in table_data %}
+                <tr>
+                    {% for cell in row %}
+                    <td>
+                        <input type="text" name="cell_{{ forloop.parentloop.counter0 }}_{{ forloop.counter0 }}" value="{{ cell }}">
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </table>
+            <button type="submit" name="save_table">Enregistrer le tableau</button>
+        </form>
+        {% endif %}
+    </div>
+    <footer>
+        © 2025 - Gestion des Tableaux. Tous droits réservés.
+    </footer>
+</body>
+</html>

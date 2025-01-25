@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.models import User, Group
-from .models import Category, Source, Content, Task, TaskAssignment, Report,SavedArticle
+from .models import Category, Source, Content, Task, TaskAssignment, Report,SavedArticle , GeneratedReport
 
 # Custom Restricted Admin Site
 class RestrictedAdminSite(admin.AdminSite):
@@ -56,6 +56,30 @@ class TaskAssignmentAdmin(admin.ModelAdmin):
 class SavedArticleAdmin(admin.ModelAdmin):
     list_display = ('title', 'link', 'content', 'summary')
     
+
+class NoteAdmin(admin.ModelAdmin):
+    list_display = ('article', 'remarks', 'analysis', 'created_at', 'updated_at')
+    list_filter = ('created_at', 'updated_at')
+    search_fields = ('article__title', 'remarks', 'analysis')
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
+
+    fieldsets = (
+        (None, {
+            'fields': ('article', 'remarks', 'analysis', 'table_data')
+        }),
+        ('Dates', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(GeneratedReport)
+class GeneratedReportAdmin(admin.ModelAdmin):
+    list_display = ('title', 'generated_at', 'pdf_file')
+    readonly_fields = ('generated_at',)
 
 
 # Register models to Restricted Admin Site

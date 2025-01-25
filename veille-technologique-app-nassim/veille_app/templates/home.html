@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyste VT</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa; /* Couleur de fond légère */
+            color: #343a40; /* Texte sombre */
+        }
+
+        header {
+            background: #007bff; /* Bleu professionnel */
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .tools {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .tools div {
+            flex: 1;
+            background: #ffffff; /* Fond blanc propre */
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .tools div:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .tools div h3 {
+            color: #495057; /* Texte gris foncé */
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .tools div p {
+            color: #6c757d; /* Texte gris moyen */
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .tools div a {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff; /* Couleur bleu */
+            color: white; /* Texte blanc */
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s;
+        }
+
+        .tools div a:hover {
+            background-color: #0056b3; /* Bleu foncé au survol */
+            transform: scale(1.05);
+        }
+
+        h2 {
+            font-size: 22px;
+            color: #343a40;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #ffffff; /* Fond blanc pour la table */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        table th, table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        table th {
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+
+        table td {
+            font-size: 14px;
+            color: #495057;
+        }
+
+        table tr.unread td {
+            border: 2px solid red; /* Bordure rouge pour les articles non lus */
+            background-color: #ffe6e6; /* Fond légèrement rouge */
+        }
+
+        table tr:hover {
+            background-color: #f1f3f5;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 10px;
+            background-color: #f8f9fa; /* Footer discret */
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>Analyste VT</header>
+    <div class="container">
+        <section class="tools">
+            <div>
+                <h3>Ajouter des notes</h3>
+                <p>Ajoutez des notes, saisissez des données et des liens.</p>
+                <a href="{% url 'select_article_for_note' %}">Ajouter une nouvelle note</a>
+            </div>
+            <div>
+                <h3>Générer un rapport</h3>
+                <p>Créez des rapports basés sur vos notes et graphiques.</p>
+                <a href="{}">Aller à Générer un rapport</a>
+            </div>
+            <div>
+                <h3>Demander un assistant IA</h3>
+                <p>Obtenez des réponses à vos questions et générez des graphiques et des tableaux.</p>
+                <a href="https://chat.openai.com/" target="_blank">Demander l'assistant</a>
+            </div>
+        </section>
+        <section>
+            <h2>Articles Récents</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Lien</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for article in articles %}
+                    <tr class="unread">
+                        <td>{{ article.title }}</td>
+                        <td><a href="{{ article.link }}" target="_blank">{{ article.link }}</a></td>
+                        <td><a href="{% url 'article_detail' article.id %}">Voir plus</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" style="text-align: center;">Aucun article trouvé.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+    <footer>
+        © 2025 Analyste VT - Tous droits réservés. Développé par <a href="#">Votre Nom</a>.
+    </footer>
+</body>
+</html>

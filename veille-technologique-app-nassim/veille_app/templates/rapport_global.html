@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport Global</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9fafb;
+            color: #5b5959;
+        }
+        header {
+            background-color: #fadae3;
+            color: rgb(55, 54, 54);
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            color: #333539;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            font-size: 22px;
+            color: #8e7c8e;
+            margin-bottom: 10px;
+        }
+        .section ul {
+            list-style-type: disc;
+            margin: 0;
+            padding-left: 20px;
+        }
+        .section ul li {
+            background-color: #f3f4f6;
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        table th, table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+        }
+        table th {
+            background-color: #ddd;
+            font-weight: bold;
+        }
+        table td {
+            background-color: #f9fafb;
+        }
+        canvas {
+            margin: 20px auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Rapport Global
+    </header>
+    <div class="container">
+        <h1>Résumé des Notes</h1>
+
+        <!-- Section pour les remarques -->
+        <div class="section">
+            <h2>Remarques :</h2>
+            <ul>
+                {% for note in notes %}
+                    {% if note.remarks %}
+                    <li>{{ note.remarks }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Section pour les analyses -->
+        <div class="section">
+            <h2>Analyses :</h2>
+            <ul>
+                {% for note in notes %}
+                    {% if note.analysis %}
+                    <li>{{ note.analysis }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Section pour les tableaux et graphiques -->
+        <div class="section">
+            <h2>Tableaux :</h2>
+            {% for note in notes %}
+                {% if note.table_data %}
+                <h3>Tableau associé à l'article : {{ note.article.title }}</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            {% for col in note.table_data.0 %}
+                            <th>{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in note.table_data|slice:"1:" %}
+                        <tr>
+                            {% for cell in row %}
+                            <td>{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Bouton Télécharger en PDF -->
+        <div style="text-align: center; margin-top: 20px;">
+            <button onclick="window.location.href='{% url 'generate_pdf' %}'"
+                style="padding: 10px 20px; background-color: #007bff; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer;">
+                Télécharger en PDF
+            </button>
+        </div>
+    </div>
+        
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            {% for note in notes %}
+                {% if note.table_data %}
+                    const labels = [];
+                    const data = [];
+    
+                    // Extraction des données du tableau
+                    const tableData = {{ note.table_data|safe }};
+                    tableData.slice(1).forEach(row => {
+                        labels.push(row[0]);
+                        data.push(parseFloat(row[1]) || 0);
+                    });
+    
+                    // Création du graphique
+                    const ctx = document.getElementById("chart-{{ forloop.counter }}").getContext("2d");
+                    new Chart(ctx, {
+                        type: "bar",
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: "Données du tableau",
+                                data: data,
+                                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                                borderColor: "rgba(75, 192, 192, 1)",
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                {% endif %}
+            {% endfor %}
+        });
+    </script>
+</body>
+</html>

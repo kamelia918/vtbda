@@ -125,6 +125,7 @@
 import base64
 from io import BytesIO
 import io
+from sqlite3 import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
@@ -649,11 +650,6 @@ def analyste_view(request):
     return render(request, 'Analystekeywords.html', context)
 
 
-def task_content(request, task_id):
-    task = get_object_or_404(Task, id=task_id)
-    # Fetch all content related to the task's source
-    contents = Content.objects.filter(source__task=task)
-    return render(request, 'task_content.html', {'task': task, 'contents': contents})
 # >>>>>>> origin/main
 
 
@@ -673,170 +669,417 @@ from scholarly import scholarly
 import pdfplumber  
 from bs4 import BeautifulSoup 
 
+import requests 
+import xml.etree.ElementTree as ET
+from datetime import datetime
+from django.shortcuts import render
+from django.http import JsonResponse
+from .forms import ArxivSearchForm,ScholarSearchForm,ScholarsemSearchForm,PLOSOneSearchForm  
+from .models import SavedArticle, DeletedArticle
+from scholarly import scholarly
+import pdfplumber  
+from bs4 import BeautifulSoup 
 
 
 
-def fetch_arxiv_articles(request):
-    articles = []  
-    form = ArxivSearchForm(request.GET or None)  
+
+@login_required
+def fetch_arxiv_articles(request,task_id):
+    task = get_object_or_404(Task, pk=task_id)
+    articles = []
+    form = ArxivSearchForm(request.GET or None)
 
     if form.is_valid():
-        mot_cle = form.cleaned_data['mot_cle']
-        date_debut = form.cleaned_data['date_debut']
-        date_fin = form.cleaned_data['date_fin']
+        mot_cle = form.cleaned_data.get('mot_cle', '') or ''
+        date_debut = form.cleaned_data.get('date_debut', None)
+        date_fin = form.cleaned_data.get('date_fin', None)
 
-        
-        url = f"http://export.arxiv.org/api/query?search_query=all:{mot_cle}&start=0&max_results=10"
-        response = requests.get(url)
+        # 1) Vérifier si tout est vide (mot-cle et dates)
+        if not mot_cle and not date_debut and not date_fin:
+            # On ne lance pas la requête et on renvoie la page vide
+            return render(request, 'articles.html', {'form': form, 'articles': articles})
 
-        if response.status_code == 200:
-            root = ET.fromstring(response.content)
-
-            for entry in root.findall("{http://www.w3.org/2005/Atom}entry"):
-                title = entry.find("{http://www.w3.org/2005/Atom}title").text
-                summary = entry.find("{http://www.w3.org/2005/Atom}summary").text
-                authors = [author.find("{http://www.w3.org/2005/Atom}name").text for author in entry.findall("{http://www.w3.org/2005/Atom}author")]
-                link = entry.find("{http://www.w3.org/2005/Atom}link[@rel='alternate']").attrib['href']
-                pdf_link = f"{link.replace('abs', 'pdf')}"
-
-                published = entry.find("{http://www.w3.org/2005/Atom}published").text
-                pub_date = datetime.strptime(published, "%Y-%m-%dT%H:%M:%S%z").date()
-
-                if not DeletedArticle.objects.filter(link=link).exists():
-                    is_saved = SavedArticle.objects.filter(link=link).exists()
-                    if date_debut <= pub_date <= date_fin:
-                        article_content = None
-                        try:
-                            # Télécharger et extraire le contenu du PDF
-                            pdf_response = requests.get(pdf_link)
-                            if pdf_response.status_code == 200:
-                                with open("temp.pdf", "wb") as f:
-                                    f.write(pdf_response.content)
-                                with pdfplumber.open("temp.pdf") as pdf:
-                                    article_content = "\n".join(page.extract_text() for page in pdf.pages)
-                        except Exception as e:
-                            article_content = f"Impossible d'extraire le contenu : {e}"
-
-                        articles.append({
-                            'title': title,
-                            'summary': summary,
-                            'authors': authors,
-                            'link': link,
-                            'published': pub_date,
-                            'is_saved': is_saved,
-                            'content': article_content
-                        })
+        # 2) Construire la requête ArXiv
+        #    Si mot_cle est vide, on peut mettre "all:" => potentiellement large.
+        #    Sinon, on fait all:mot_cle
+        if mot_cle:
+            query_param = f"all:{mot_cle}"
         else:
-            return render(request, 'error.html', {'error_message': f"Erreur lors de la requête. Statut : {response.status_code}"})
+            query_param = "all:"  # attention au volume potentiellement énorme
 
-    return render(request, 'articles.html', {'form': form, 'articles': articles})
+        url = f"http://export.arxiv.org/api/query?search_query={query_param}&start=0&max_results=20"
+
+        # 3) Appeler l'API ArXiv avec un timeout
+        try:
+            response = requests.get(url, timeout=10)  # Timeout 10s
+            response.raise_for_status()              # Lève une exception pour code 4xx/5xx
+        except requests.exceptions.RequestException as e:
+            return render(request, 'error.html', {
+                'error_message': f"Erreur lors de la requête ArXiv : {str(e)}"
+            })
+
+        # 4) Si la requête est OK, parser la réponse XML
+        if response.status_code == 200:
+            try:
+                root = ET.fromstring(response.content)
+            except ET.ParseError as pe:
+                return render(request, 'error.html', {
+                    'error_message': f"Impossible de parser la réponse XML : {str(pe)}"
+                })
+
+            # 5) Parcourir les entrées
+            for entry in root.findall("{http://www.w3.org/2005/Atom}entry"):
+                title_el = entry.find("{http://www.w3.org/2005/Atom}title")
+                summary_el = entry.find("{http://www.w3.org/2005/Atom}summary")
+                published_el = entry.find("{http://www.w3.org/2005/Atom}published")
+
+                # Récupérer titre, résumé, date
+                title = title_el.text if title_el is not None else "No Title"
+                summary = summary_el.text if summary_el is not None else "No Summary"
+                published = published_el.text if published_el is not None else ""
+
+                # Convertir date en objet date
+                try:
+                    pub_date = datetime.strptime(published, "%Y-%m-%dT%H:%M:%S%z").date()
+                except ValueError:
+                    pub_date = None
+
+                # Récupérer auteurs
+                authors = []
+                for author_el in entry.findall("{http://www.w3.org/2005/Atom}author"):
+                    name_el = author_el.find("{http://www.w3.org/2005/Atom}name")
+                    if name_el is not None:
+                        authors.append(name_el.text)
+
+                # Récupérer lien (version 'abs')
+                link_el = entry.find("{http://www.w3.org/2005/Atom}link[@rel='alternate']")
+                if link_el is not None and 'href' in link_el.attrib:
+                    link = link_el.attrib['href']
+                else:
+                    link = "#"
+
+                # PDF link (remplace 'abs' par 'pdf')
+                pdf_link = link.replace("abs", "pdf")
+
+                # 6) Vérifier si article est marqué 'Deleted'
+                if DeletedArticle.objects.filter(link=link).exists():
+                    continue
+
+                # 7) Vérifier date_debut/date_fin si elles existent
+                #    Si date_debut / date_fin n'existent pas, on ne filtre pas
+                if (date_debut and date_fin and pub_date) and not (date_debut <= pub_date <= date_fin):
+                    # Pub date hors intervalle => on ignore
+                    continue
+
+                # 8) Vérifier si déjà 'Saved'
+                is_saved = SavedArticle.objects.filter(link=link).exists()
+
+                # 9) Extraire le contenu PDF si la date est dans l'intervalle
+                article_content = None
+                try:
+                    pdf_response = requests.get(pdf_link, timeout=10)
+                    if pdf_response.status_code == 200:
+                        # Sauvegarder temporairement le PDF
+                        with open("temp.pdf", "wb") as f:
+                            f.write(pdf_response.content)
+                        # Extraire le texte
+                        with pdfplumber.open("temp.pdf") as pdf:
+                            article_content = "\n".join(
+                                page.extract_text() or "" for page in pdf.pages
+                            )
+                except Exception as e:
+                    article_content = f"Impossible d'extraire le contenu : {str(e)}"
+
+                # 10) Ajouter l'article à la liste
+                articles.append({
+                    'title': title,
+                    'summary': summary,
+                    'authors': authors,
+                    'link': link,
+                    'published': pub_date,
+                    'is_saved': is_saved,
+                    'content': article_content,
+                })
+        else:
+            return render(
+                request, 
+                'error.html', 
+                {'error_message': f"Erreur lors de la requête. Statut : {response.status_code}"}
+            )
+    tasks = Task.objects.all()
+    # 11) Renvoyer le template
+    return render(request, 'articles.html', {
+    'form': form,
+    'articles': articles,
+    'tasks': tasks,  # Ajout des tâches au contexte
+    'task_id': task_id  # Add task_id to the context
+     
+      })
 
 
-def save_article(request):
+
+# views.py
+# views.py
+
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from .models import Task, SavedArticle
+from django.views.decorators.csrf import csrf_exempt
+import logging
+# views.py
+
+import logging
+from django.shortcuts import get_object_or_404, redirect, render
+from django.http import JsonResponse, HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from .models import Task, SavedArticle, DeletedArticle
+from .forms import PLOSOneSearchForm, ArxivSearchForm
+import requests
+from bs4 import BeautifulSoup
+import nltk
+from collections import Counter
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+import re
+
+# Configurez un logger
+logger = logging.getLogger(__name__)
+
+# Vue `save_article`
+@csrf_exempt  # Pour le débogage seulement. Supprimez ceci en production et gérez correctement le CSRF.
+def save_article(request, task_id):
     if request.method == 'POST':
-        title = request.POST.get('title')
-        link = request.POST.get('link')
-        content = request.POST.get('content')  
-        summary = request.POST.get('summary')  
-        authors = request.POST.get('authors') 
+        logger.debug(f"Received POST request to save_article for task_id={task_id}")
+        try:
+            task = get_object_or_404(Task, pk=task_id)
+            logger.debug(f"Task found: {task}")
 
-       
-        SavedArticle.objects.get_or_create(
-            title=title,
-            link=link,
-            content=content, 
-            summary=summary,
-            author=authors,
-          
-        )
+            title = request.POST.get('title')
+            link = request.POST.get('link')
+            content = request.POST.get('content')  
+            summary = request.POST.get('summary')  
+            authors = request.POST.get('authors') 
 
-        return JsonResponse({'message': 'Article saved successfully!'})
-    return JsonResponse({'message': 'Invalid request'}, status=400)
+            logger.debug(f"Received data - Title: {title}, Link: {link}, Authors: {authors}")
 
+            if not all([title, link, content, summary, authors]):
+                logger.warning("Incomplete article data received.")
+                return JsonResponse({'message': 'Données de l\'article incomplètes.'}, status=400)
 
+            saved_article, created = SavedArticle.objects.get_or_create(
+                link=link,
+                defaults={
+                    'title': title,
+                    'content': content,
+                    'summary': summary,
+                    'author': authors,
+                    'task': task
+                }
+            )
 
+            if not created:
+                logger.debug("Article already exists. Updating task.")
+                saved_article.task = task
+                saved_article.save()
+                return JsonResponse({'message': 'Article mis à jour avec succès !'})
+            
+            logger.debug("Article created successfully.")
+            return JsonResponse({'message': 'Article sauvegardé avec succès !'})
+        
+        except Exception as e:
+            logger.error(f"Erreur lors de la sauvegarde de l'article: {e}")
+            return JsonResponse({'message': 'Une erreur est survenue lors de la sauvegarde de l\'article.', 'error': str(e)}, status=500)
+    
+    logger.warning("Non-POST request received for save_article.")
+    return JsonResponse({'message': 'Requête invalide'}, status=400)
+
+# Vue `delete_article`
 def delete_article(request):
     if request.method == 'POST':
         title = request.POST.get('title')
         link = request.POST.get('link')
 
-       
+        if not all([title, link]):
+            return JsonResponse({'message': 'Données insuffisantes pour supprimer l\'article.'}, status=400)
+
+        # Marquer l'article comme supprimé
         DeletedArticle.objects.get_or_create(title=title, link=link)
+
+        # Optionnel : Supprimer l'article de SavedArticle
+        SavedArticle.objects.filter(title=title, link=link).delete()
 
         return JsonResponse({'message': 'Article deleted successfully!'})
     return JsonResponse({'message': 'Invalid request'}, status=400)
 
-
-
-def fetch_plosone_articles(request):
-    articles = [] 
-    form = PLOSOneSearchForm(request.GET or None)  # Initialiser le formulaire
+# Vue `fetch_plosone_articles`
+@login_required
+def fetch_plosone_articles(request, task_id):
+    task = get_object_or_404(Task, pk=task_id)
+    articles = []
+    form = PLOSOneSearchForm(request.GET or None)
 
     if form.is_valid():
-        mot_cle = form.cleaned_data['mot_cle']
-        url = f"https://api.plos.org/search?q=title:{mot_cle}&wt=json&rows=10"
+        mot_cle = form.cleaned_data['mot_cle'] or ''
+        date_debut = form.cleaned_data['date_debut']
+        date_fin = form.cleaned_data['date_fin']
 
-        response = requests.get(url)
+        # 1) Si l'utilisateur n'a RIEN saisi (ni mot_cle ni dates), on n'appelle pas l'API
+        if not mot_cle and not date_debut and not date_fin:
+            # On renvoie juste la page (articles = [])
+            return render(request, 'plosone_articles.html', {
+                'form': form,
+                'articles': articles,
+                'tasks': Task.objects.all(),
+                'task_id': task_id
+            })
 
-        if response.status_code == 200:
-            data = response.json()
-            docs = data.get('response', {}).get('docs', [])
+        # 2) Construire la requête Lucene pour l'API PLOS
+        if date_debut and date_fin:
+            # L'utilisateur a mis un intervalle de dates
+            start_str = date_debut.strftime('%Y-%m-%dT00:00:00Z')
+            end_str = date_fin.strftime('%Y-%m-%dT23:59:59Z')
 
-            for doc in docs:
-                link = f"https://journals.plos.org/plosone/article?id={doc.get('id')}"
-
-                
-                if DeletedArticle.objects.filter(link=link).exists():
-                    continue
-
-                
-                is_saved = SavedArticle.objects.filter(link=link).exists()
-
-                
-                content = ''
-                try:
-                    article_page = requests.get(link)
-                    if article_page.status_code == 200:
-                        soup = BeautifulSoup(article_page.content, 'html.parser')
-
-                        
-                        introduction_section = soup.find('section', {'class': 'intro'})
-                        
-                        if not introduction_section:
-                            
-                            introduction_section = soup.find('section', {'id': 'article-introduction'})
-                            
-                        if introduction_section:
-                            
-                            content = introduction_section.get_text(separator="\n", strip=True)
-                        else:
-                           
-                            content = soup.get_text(separator="\n", strip=True)
-                            
-                except requests.exceptions.RequestException as e:
-                    content = f"Erreur lors de la récupération du contenu : {str(e)}"
-
-                
-                articles.append({
-                    'title': doc.get('title_display', 'No Title'),
-                    'authors': doc.get('author_display', []),
-                    'journal': doc.get('journal', 'Unknown Journal'),
-                    'link': link,
-                    'published': doc.get('publication_date', 'Unknown Date'),
-                    'summary': doc.get('abstract', 'No Abstract'),
-                    'content': content, 
-                    'is_saved': is_saved, 
-                })
+            if mot_cle:
+                # mot_cle + intervalle
+                query = f"title:{mot_cle} AND publication_date:[{start_str} TO {end_str}]"
+            else:
+                # Pas de mot_cle => récupérer *tout* dans l'intervalle
+                query = f"title:* AND publication_date:[{start_str} TO {end_str}]"
         else:
-            return render(request, 'error.html', {'error_message': f"Erreur lors de la requête. Statut : {response.status_code}"})
+            # Pas de dates valides
+            if mot_cle:
+                # Recherche uniquement par mot_cle
+                query = f"title:{mot_cle}"
+            else:
+                # Pas de mot_cle non plus => autoriser "tout" sans dates :
+                query = "title:*"
 
-    return render(request, 'plosone_articles.html', {'form': form, 'articles': articles})
+        url = f"https://api.plos.org/search?q={query}&wt=json&rows=10"
+
+        # 3) Appel API avec timeout et gestion d'erreur
+        try:
+            response = requests.get(url, timeout=10)  # Timeout de 10 secondes
+            response.raise_for_status()               # Lève une exception si HTTP 4xx/5xx
+        except requests.exceptions.RequestException as e:
+            return render(request, 'error.html', {
+                'error_message': f"Erreur lors de la requête à PLOS : {str(e)}"
+            })
+
+        # 4) Exploiter la réponse JSON
+        data = response.json()
+        docs = data.get('response', {}).get('docs', [])
+
+        for doc in docs:
+            link = f"https://journals.plos.org/plosone/article?id={doc.get('id')}"
+
+            # Sauter les articles "Deleted"
+            if DeletedArticle.objects.filter(link=link).exists():
+                continue
+
+            # Vérifier si déjà "Saved"
+            is_saved = SavedArticle.objects.filter(link=link).exists()
+
+            # Récupérer un éventuel texte d'intro
+            content = ""
+            try:
+                article_page = requests.get(link, timeout=10)
+                article_page.raise_for_status()
+                soup = BeautifulSoup(article_page.content, 'html.parser')
+
+                intro_section = soup.find('section', class_='intro')
+                if not intro_section:
+                    intro_section = soup.find('section', id='article-introduction')
+
+                if intro_section:
+                    content = intro_section.get_text(separator="\n", strip=True)
+                else:
+                    content = soup.get_text(separator="\n", strip=True)
+
+            except requests.exceptions.RequestException as e:
+                content = f"Erreur lors de la récupération du contenu : {str(e)}"
+
+            # Ajouter l'article à la liste
+            articles.append({
+                'id': doc.get('id'),  # Assurez-vous d'avoir un champ 'id'
+                'title': doc.get('title_display', 'No Title'),
+                'authors': doc.get('author_display', []),
+                'journal': doc.get('journal', 'Unknown Journal'),
+                'link': link,
+                'published': doc.get('publication_date', 'Unknown Date'),
+                'summary': doc.get('abstract', 'No Abstract'),
+                'content': content,
+                'is_saved': is_saved,
+            })
+
+    # Récupérer toutes les tâches disponibles
+    tasks = Task.objects.all()
+    # 5) Renvoyer le template avec le formulaire et les articles trouvés
+    return render(request, 'plosone_articles.html', {
+        'form': form,
+        'articles': articles,
+        'task_id': task_id,
+        'tasks': tasks
+    })
 
 
+from django.shortcuts import render
+from .models import *
+
+def fetch_content(request, task_id):
+    if task_id:
+        # Retrieve the task object and filter articles for the specific task
+        task = Task.objects.get(id=task_id)  # Retrieve the task based on the task_id
+        saved_articles = SavedArticle.objects.filter(task_id=task_id)
+    else:
+        saved_articles = SavedArticle.objects.all()
+        task = None  # If no task_id, set task to None
+
+    return render(request, 'fetch_content.html', {'saved_articles': saved_articles, 'task': task})   
+
+def task_content(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+
+    # Get or create a default category
+    default_category, _ = Category.objects.get_or_create(
+        name="Default Category",
+        defaults={"description": "This is a default category."},
+    )
+
+    # Get or create a default source
+    default_source, _ = Source.objects.get_or_create(
+        name=f"Default Source for Task {task.id}",
+        url=f"https://example.com/task/{task.id}",
+        category=default_category,
+        task=task,
+        defaults={"description": f"Default source for task {task.id}"},
+    )
+
+    # Retrieve all saved articles associated with the task
+    saved_articles = SavedArticle.objects.filter(task=task)
+
+    # Add saved articles as contents
+    for article in saved_articles:
+        # Check if a Content object with the same URL already exists
+        if not Content.objects.filter(url=article.link, task=task).exists():
+            try:
+                Content.objects.create(
+                    title=article.title,
+                    url=article.link,
+                    summary=article.summary,
+                    source=default_source,
+                    task=task,
+                    created_by=request.user if request.user.is_authenticated else None,
+                )
+            except IntegrityError:
+                print(f"Duplicate content detected for URL: {article.link}")
+        else:
+            print(f"Content with URL {article.link} already exists.")
+
+    return render(request, 'task_content.html', {'task': task, 'saved_articles': saved_articles})
 
 
 from collections import Counter
-from django.db.models import F
 import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
@@ -1184,3 +1427,205 @@ def task_saved_articles(request, task_id):
     saved_articles = SavedArticle.objects
 
     return render(request, 'analysteArticles.html', {'task': task, 'saved_articles': saved_articles})
+
+
+
+
+
+####  ---------- KAHINAAA
+
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import Article, Note
+import matplotlib.pyplot as plt
+import pandas as pd
+import io
+import base64
+from django.http import HttpResponse
+import openai
+from django.conf import settings
+
+openai.api_key = settings.OPENAI_API_KEY
+
+
+
+def home(request):
+    articles = SavedArticle.objects.all().order_by('-id')  # Trier par ID décroissant
+    return render(request, 'home.html', {'articles': articles})
+
+
+
+def article_detail(request, pk):
+    article = get_object_or_404(SavedArticle, pk=pk)  # Assurez-vous d'utiliser le modèle `SavedArticle`
+    return render(request, 'article_detail.html', {'article': article})
+
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import SavedArticle, Note
+from .forms import NoteForm
+
+def select_article_for_note(request):
+    articles = SavedArticle.objects.all()
+    return render(request, 'select_article_for_note.html', {'articles': articles})
+
+
+def create_note(request, article_id):
+    article = get_object_or_404(SavedArticle, id=article_id)
+    notes = Note.objects.filter(article=article)
+
+    # Valeurs par défaut pour les lignes et colonnes
+    rows = int(request.GET.get('rows', 3))  # Par défaut, 3 lignes
+    columns = int(request.GET.get('columns', 3))  # Par défaut, 3 colonnes
+
+    if request.method == 'POST':
+        form = NoteForm(request.POST)
+        if form.is_valid():
+            new_note = form.save(commit=False)
+            new_note.article = article
+            new_note.save()
+            return redirect('create_note', article_id=article_id)
+    else:
+        form = NoteForm()
+
+    return render(request, 'create_note.html', {
+        'article': article,
+        'notes': notes,
+        'form': form,
+        'rows': range(rows),  # Transmettre une plage pour les lignes
+        'columns': range(columns),  # Transmettre une plage pour les colonnes
+    })
+
+
+def generate_table(request, article_id):
+    article = get_object_or_404(SavedArticle, id=article_id)
+    # Vérifier si une note existe, sinon en créer une
+    note, created = Note.objects.get_or_create(article=article)
+
+    if request.method == 'POST':
+        if 'save_table' in request.POST:
+            # Sauvegarde des données du tableau
+            table_data = []
+            rows = int(request.POST.get('rows', 0))
+            columns = int(request.POST.get('columns', 0))
+            for row in range(rows):
+                row_data = []
+                for col in range(columns):
+                    cell_value = request.POST.get(f'cell_{row}_{col}', '')
+                    row_data.append(cell_value)
+                table_data.append(row_data)
+            note.table_data = json.dumps(table_data)  # Sauvegarde des données du tableau en JSON
+            note.save()
+            return redirect('create_note', article_id=article.id)
+        else:
+            # Génération initiale du tableau
+            rows = int(request.POST.get('rows', 0))
+            columns = int(request.POST.get('columns', 0))
+            table_data = [["" for _ in range(columns)] for _ in range(rows)]
+            return render(request, 'generate_table.html', {
+                'article': article,
+                'rows': rows,
+                'columns': columns,
+                'table_data': table_data,
+            })
+
+    return render(request, 'generate_table.html', {'article': article})
+
+
+
+def assistant_redirect(request):
+    # Remplacez l'URL par celle de votre assistant virtuel
+    return redirect('https://chat.openai.com/')
+
+
+
+def article_notes(request, article_id):
+    article = get_object_or_404(SavedArticle, id=article_id)
+    notes = Note.objects.filter(article=article)
+
+    # Convertir table_data de JSON en liste Python pour chaque note
+    for note in notes:
+        if note.table_data:
+            try:
+                note.table_data = json.loads(note.table_data)
+            except json.JSONDecodeError:
+                note.table_data = []  # Gérer le cas où JSON est invalide
+
+    return render(request, 'article_notes.html', {
+        'article': article,
+        'notes': notes,
+    })
+
+
+
+import json
+def generate_full_report(request):
+    articles = SavedArticle.objects.all()
+    notes = Note.objects.all()
+
+    # Décodage des données du tableau
+    for note in notes:
+        if note.table_data:
+            try:
+                note.table_data = json.loads(note.table_data)
+            except json.JSONDecodeError:
+                note.table_data = []
+
+    context = {
+        'articles': articles,
+        'notes': notes,
+    }
+
+    return render(request, 'rapport_global.html', context)
+
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from xhtml2pdf import pisa
+from django.core.files.base import ContentFile
+from django.utils.timezone import now
+from .models import SavedArticle, Note, GeneratedReport
+import json
+
+
+def generate_pdf(request):
+    # Récupérer les articles et les notes
+    articles = SavedArticle.objects.all()
+    notes = Note.objects.all()
+
+    # Traiter les données des tableaux
+    for note in notes:
+        if note.table_data:
+            try:
+                note.table_data = json.loads(note.table_data)
+                if not isinstance(note.table_data, list):
+                    note.table_data = []
+            except json.JSONDecodeError:
+                note.table_data = []
+
+    # Créer le contexte pour le rendu HTML
+    context = {
+        'articles': articles,
+        'notes': notes,
+    }
+
+    # Rendu du contenu HTML pour le PDF
+    html = render_to_string('rapport_global.html', context)
+
+    # Générer le PDF en mémoire
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="rapport_global.pdf"'
+
+    pdf = pisa.CreatePDF(html, dest=response)
+    if pdf.err:
+        return HttpResponse('Erreur lors de la génération du PDF', status=500)
+
+    # Enregistrer le PDF dans la base de données
+    pdf_content = ContentFile(response.content)
+    report_title = f"Rapport_{now().strftime('%Y%m%d_%H%M%S')}"
+    report = GeneratedReport(title=report_title)
+    report.pdf_file.save(f"{report_title}.pdf", pdf_content)
+    report.save()
+
+    # Retourner le PDF comme réponse
+    return response

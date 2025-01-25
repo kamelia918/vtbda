@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détails de l'article</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .content h1 {
+            color: #333;
+        }
+
+        .content p {
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>{{ article.title }}</h1>
+    </header>
+    <div class="content">
+        <p><strong>Lien :</strong> <a href="{{ article.link }}" target="_blank">{{ article.link }}</a></p>
+        <p><strong>Résumé :</strong> {{ article.summary }}</p>
+        <p><strong>Contenu :</strong> {{ article.content }}</p>
+        <p><strong>Auteur :</strong> {{ article.author }}</p>
+        <a href="{% url 'home' %}" class="back-link">Retour à la liste des articles</a>
+    </div>
+</body>
+</html>

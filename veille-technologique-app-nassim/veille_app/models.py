@@ -63,32 +63,32 @@ class Content(models.Model):
 
 
 
-class SavedArticle(models.Model):
-    title = models.CharField(max_length=500)
-    link = models.URLField(unique=True)
-    content = models.TextField(default="No content available.")
-    summary = models.TextField(default="No content available.")
-    author = models.TextField(default="No author available.")  # Updated default
-
-   
-
-    def __str__(self):
-        return self.title
-
-
-
 # class SavedArticle(models.Model):
 #     title = models.CharField(max_length=500)
 #     link = models.URLField(unique=True)
 #     content = models.TextField(default="No content available.")
 #     summary = models.TextField(default="No content available.")
 #     author = models.TextField(default="No author available.")  # Updated default
-#     task = models.ForeignKey(Task, related_name='saved_articles', on_delete=models.CASCADE,null=True)
 
    
 
 #     def __str__(self):
 #         return self.title
+
+
+
+class SavedArticle(models.Model):
+    title = models.CharField(max_length=500)
+    link = models.URLField(unique=True)
+    content = models.TextField(default="No content available.")
+    summary = models.TextField(default="No content available.")
+    author = models.TextField(default="No author available.")  # Updated default
+    task = models.ForeignKey(Task, related_name='saved_articles', on_delete=models.CASCADE,null=True)
+
+   
+
+    def __str__(self):
+        return self.title
 
 
 
@@ -136,3 +136,50 @@ class Rapport(models.Model):
 
     def __str__(self):
         return self.titre
+    
+
+class Article(models.Model):
+    title = models.CharField(max_length=255)
+    link = models.URLField()
+    content = models.TextField(blank=True)
+    received_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+class Note(models.Model):
+    article = models.ForeignKey(
+        'SavedArticle', 
+        on_delete=models.CASCADE, 
+        related_name='notes'
+    )
+    remarks = models.TextField(
+        null=True, 
+        blank=True, 
+        help_text="Remarques ou observations supplémentaires"
+    )
+    analysis = models.TextField(
+        null=True, 
+        blank=True, 
+        help_text="Résumé de l'analyse générale"
+    )
+    table_data = models.TextField(
+        null=True, 
+        blank=True, 
+        help_text="Données du tableau remplies par l'utilisateur"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def str(self):
+        return f"Note for {self.article.title} - {self.created_at}"
+
+
+class GeneratedReport(models.Model):
+    title = models.CharField(max_length=255, default="Rapport Global")
+    generated_at = models.DateTimeField(auto_now_add=True)
+    pdf_file = models.FileField(upload_to='generated_reports/', null=True, blank=True)
+
+    def str(self):
+        return f"{self.title} - {self.generated_at}"

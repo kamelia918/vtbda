@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sélectionnez un article</title>
+    <style>
+        /* Styles globaux */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa; /* Arrière-plan clair */
+            color: #353333; /* Texte principal */
+        }
+
+        header {
+            background-color: #fadae3; /* Bleu principal */
+            color: rgb(74, 74, 74);
+            text-align: center;
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 0 0 16px 16px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            background-color: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 26px;
+            color: #495057; /* Gris foncé */
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        ul.article-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li.article-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            background: #f1f3f5; /* Arrière-plan doux */
+            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.05),
+                        inset -2px -2px 5px rgba(255, 255, 255, 0.7);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        li.article-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .article-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #212529; /* Texte principal */
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-add {
+            background: #f2ddeb; 
+            color: rgb(44, 39, 39);
+            box-shadow: 0 4px 8px rgba(238, 188, 231, 0.3);
+        }
+
+        .btn-add:hover {
+            background: #eed1fa;
+            box-shadow: 0 6px 12px rgba(56, 217, 169, 0.4);
+        }
+
+        .btn-view {
+            background: #aeb9e6; /* Bleu clair */
+            color: rgb(44, 39, 39);
+            box-shadow: 0 4px 8px rgba(238, 188, 231, 0.3);
+        }
+
+        .btn-view:hover {
+            background: #333335;
+            box-shadow: 0 6px 12px rgba(76, 110, 245, 0.4);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 14px;
+            color: #868e96; /* Gris clair */
+        }
+
+        footer a {
+            color: #4d4e4e;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Sélectionnez un article
+    </header>
+    <div class="container">
+        <h1>Articles Disponibles</h1>
+        <ul class="article-list">
+            {% for article in articles %}
+            <li class="article-item">
+                <div>
+                    <div class="article-title">{{ article.title }}</div>
+                    <a href="{{ article.link }}" target="_blank">Voir l'article</a>
+                </div>
+                <div class="actions">
+                    <a href="{% url 'create_note' article.id %}" class="btn btn-add">Ajouter une note</a>
+                    <a href="{% url 'article_notes' article.id %}" class="btn btn-view">Voir les notes</a>
+                </div>
+            </li>
+            {% empty %}
+            <li class="article-item">
+                Aucun article disponible.
+            </li>
+            {% endfor %}
+        </ul>
+         <!-- Bouton pour générer un rapport -->
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="{% url 'generate_full_report' %}" class="btn btn-add">Générer un Rapport Global</a>
+    </div>
+    </div>
+    <footer>
+        © 2025 Analyste VT - Tous droits réservés. <a href="#">Politique de confidentialité</a>
+    </footer>
+</body>
+</html>

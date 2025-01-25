@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détails de la note</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Styles globaux */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa; /* Arrière-plan clair */
+            color: #333; /* Texte principal */
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #fadae3; /* Couleur pastel */
+            color: #4d4d4d;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 0 0 16px 16px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            font-size: 22px;
+            color: #5a189a; /* Violet */
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #495057; /* Gris foncé */
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table th {
+            background-color: #eec1ed; /* Bleu clair */
+            color: white;
+            font-weight: 600;
+            padding: 12px;
+            text-align: center;
+        }
+
+        table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            background-color: #f9fafb; /* Fond clair */
+        }
+
+        table tr:nth-child(even) td {
+            background-color: #f1f3f5; /* Alternance */
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            font-weight: 500;
+            color: white;
+            background-color: #e8c5e5;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        a:hover {
+            background-color: #357ae8;
+            box-shadow: 0 4px 10px rgba(53, 122, 232, 0.3);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #fadae3; /* Pastel */
+            font-size: 14px;
+            color: #6b7280; /* Gris clair */
+            border-radius: 16px 16px 0 0;
+        }
+
+        footer a {
+            color: #0056a8;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Détails de la note
+    </header>
+    <div class="container">
+        <h2>Remarques</h2>
+        <p>{{ note.remarks }}</p>
+
+        <h2>Analyse</h2>
+        <p>{{ note.analysis }}</p>
+
+        {% if table_data %}
+        <h2>Tableau</h2>
+        <table>
+            <thead>
+                <tr>
+                    {% for header in table_data.0 %}
+                    <th>{{ header }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table_data.1 %}
+                <tr>
+                    {% for cell in row %}
+                    <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Aucun tableau associé à cette note.</p>
+        {% endif %}
+        
+        <a href="{% url 'article_notes' note.article.id %}">Retour aux notes</a>
+    </div>
+    <footer>
+        © 2025 Analyste VT - Tous droits réservés. <a href="#">Politique de confidentialité</a>
+    </footer>
+</body>
+</html>
