@@ -55,11 +55,10 @@ class Content(models.Model):
     source = models.ForeignKey(Source, related_name="contents", on_delete=models.CASCADE)
     date_fetched = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, related_name="contents", on_delete=models.SET_NULL, null=True, blank=True)
-# id task 
+    task = models.ForeignKey(Task, related_name="contents", on_delete=models.CASCADE, null=True, blank=True)  # Ajout de la clé étrangère vers Task
+
     def __str__(self):
         return self.title
-    
-
 
 
 
