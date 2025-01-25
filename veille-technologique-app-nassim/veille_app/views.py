@@ -1151,11 +1151,36 @@ def detail_rapport(request, rapport_id):
 
 
 
+# def analyste_kanban_view(request):
+#     # tasks = Task.objects.filter(assignmentsuser=request.user).prefetch_related('assignmentsuser')
+#     tasks=Task.objects
+#     tasks_todo = tasks.filter(status='To Do')
+#     tasks_in_progress = tasks.filter(status='In Progress')
+#     tasks_completed = tasks.filter(status='Completed')
+
+#     return render(request, 'analyste.html', {'tasks': tasks,'tasks_todo':tasks_todo,'tasks_in_progress':tasks_in_progress,'tasks_completed':tasks_completed})
+
+
 def analyste_kanban_view(request):
-    # tasks = Task.objects.filter(assignmentsuser=request.user).prefetch_related('assignmentsuser')
-    tasks=Task.objects
+    # Récupérer les tâches assignées à l'utilisateur connecté
+    tasks = Task.objects.all()  # Exécute une requête pour récupérer tous les objets Task
     tasks_todo = tasks.filter(status='To Do')
     tasks_in_progress = tasks.filter(status='In Progress')
     tasks_completed = tasks.filter(status='Completed')
 
-    return render(request, 'analyste.html', {'tasks': tasks,'tasks_todo':tasks_todo,'tasks_in_progress':tasks_in_progress,'tasks_completed':tasks_completed})
+    return render(request, 'analyste.html', {
+        'tasks': tasks, 
+        'tasks_todo': tasks_todo,
+        'tasks_in_progress': tasks_in_progress,
+        'tasks_completed': tasks_completed
+    })
+
+
+
+def task_saved_articles(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    # Fetch all saved articles related to the task
+    # saved_articles = SavedArticle.objects.filter(task=task)
+    saved_articles = SavedArticle.objects
+
+    return render(request, 'analysteArticles.html', {'task': task, 'saved_articles': saved_articles})

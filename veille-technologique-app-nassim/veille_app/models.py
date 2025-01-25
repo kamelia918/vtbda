@@ -76,6 +76,22 @@ class SavedArticle(models.Model):
         return self.title
 
 
+
+# class SavedArticle(models.Model):
+#     title = models.CharField(max_length=500)
+#     link = models.URLField(unique=True)
+#     content = models.TextField(default="No content available.")
+#     summary = models.TextField(default="No content available.")
+#     author = models.TextField(default="No author available.")  # Updated default
+#     task = models.ForeignKey(Task, related_name='saved_articles', on_delete=models.CASCADE,null=True)
+
+   
+
+#     def __str__(self):
+#         return self.title
+
+
+
 class DeletedArticle(models.Model):
     title = models.CharField(max_length=500)
     link = models.URLField(unique=True)
@@ -107,7 +123,6 @@ class Report(models.Model):
         return self.title
 
 
-from django.db import models
 
 class Rapport(models.Model):
     titre = models.CharField(max_length=200)

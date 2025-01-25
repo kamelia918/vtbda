@@ -40,6 +40,8 @@ urlpatterns = [
     path('rapports/<int:rapport_id>/', detail_rapport, name='detail_rapport'),
     path('creer-rapport/', creer_rapport, name='creer_rapport'),
     path('rapport/', rapport, name='rapport'),
+    path('task_saved_articles/<int:task_id>/', task_saved_articles, name='task_saved_articles'),
+
 
 
 ]

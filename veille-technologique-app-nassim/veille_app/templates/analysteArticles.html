@@ -15,7 +15,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kanban Board</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <style>
         :root {
             --todo-color: #818cf8;
@@ -302,119 +301,77 @@
     <div class="container">
         <ul class="nav nav-tabs">
             <li class="nav-item">
-                <a class="nav-link " href=#>Articles</a>
+                <a class="nav-link active" aria-current="page" href="#">Articles</a>
               </li>
             <li class="nav-item">
               <a class="nav-link"  href="{% url 'author_statistics' %}">auteur</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="#">mots-clés</a>
+              <a class="nav-link"  href="{% url 'analyste' %}">mots-clés</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#">sentiment</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link"  href="{% url 'word_statistics' %}">custom</a>
+              <a class="nav-link" href="{% url 'word_statistics' %}">custom</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link"  href="{% url 'liste_rapports' %}">Rapport</a>
               </li>
+
           </ul>
-      
+          
+          <div class="container">
+        
 
-          
-              <h1>Nuage de Mots</h1>
-              <img src="{{ wordcloud_file }}" alt="WordCloud">
-          
-              <h1>Top 20 des Mots les Plus Fréquents</h1>
-              <img src="{{ bar_chart_file }}" alt="Bar Chart">
-          
-              <h1>Corrélation entre Mots-Clés</h1>
-              <div id="heatmap"></div>
-
-              <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
-                <ol class="carousel-indicators">
-                  <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active"></li>
-                  <li data-target="#carouselExampleIndicators" data-slide-to="1"></li>
-                  <li data-target="#carouselExampleIndicators" data-slide-to="2"></li>
-                </ol>
-                <div class="carousel-inner">
-                  <div class="carousel-item active">
-                    <div id="correlation-matrix">{{ correlation_matrix_html|safe }}</div>
-                    
-                  </div>
-                  <div class="carousel-item">
-                    <div id="arc-diagram">{{ bubble_chart_html|safe }}</div>
-                    <div class="carousel-caption d-none d-md-block">
-                        <h5>graphique en bulles</h5>
-                      </div>
-                  </div>
-                  <div class="carousel-item">
-                    <div id="arc-diagram">{{ arc_diagram_html|safe }}</div>
-                    <div class="carousel-caption d-none d-md-block">
-                        <h5>graphique en arc</h5>
-                       
-                      </div>
-                  </div>
-                  <div class="carousel-item">
-                    <div id="network-graph">{{ network_graph_html|safe }}</div>
-                    <div class="carousel-caption d-none d-md-block">
-                        <h5>graphique en réseau</h5>
-                    
-                      </div>
-                  </div>
+            <div class="kanban-board">
+                <div class="kanban-column" id="to-do-column">
+                    <div class="column-header">
+                        <i class="fas fa-list header-icon"></i>
+                        <h4>Saved Articles for Task: {{ task.title }}</h4>
+                    </div>
+                    {% for saved_article in task.saved_articles.all %}
+                        <div class="kanban-task" id="task-{{ saved_article.id }}" data-task-id="{{ saved_article.id }}" draggable="true" ondragstart="drag(event)">
+                            <div class="task-title">{{ saved_article.title }}</div>
+                            <div class="task-meta">
+                                <i class="fas fa-link"></i>
+                                <a href="{{ saved_article.link }}" target="_blank">View Article</a>
+                            </div>
+                            <div class="task-meta">
+                                <i class="far fa-user"></i>
+                                Author: {{ saved_article.author }}
+                            </div>
+                            <div class="task-actions">
+                                <a href="{% url 'admin:veille_app_savedarticle_change' saved_article.id %}" class="task-btn edit-btn">
+                                    <i class="fas fa-edit"></i>
+                                    View Article
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
-                <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
-                  <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                  <span class="sr-only">Previous</span>
-                </a>
-                <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
-                  <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                  <span class="sr-only">Next</span>
-                </a>
-              </div>
-            
+            </div>
+        </div>
               
-              <h1>Articles Associés aux Mots-Clés</h1>
-              <ul>
-                  {% for word_data in frequent_words_data %}
-                      <li>
-                          <strong>{{ word_data.word }}</strong> ({{ word_data.articles|length }} articles) :
-                          <ul>
-                              {% for article_info in word_data.articles %}
-                                  <li>
-                                      <a href="{{ article_info.article.link }}">{{ article_info.article.title }}</a>
-                                      ({{ article_info.count }} occurrences)
-                                  </li>
-                              {% endfor %}
-                          </ul>
-                      </li>
-                  {% endfor %}
-              </ul>
+        
+        <script>
+            // Select or deselect all checkboxes for each word's articles
+            document.querySelectorAll('.select_all_articles').forEach(function(selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    const wordId = this.getAttribute('data-word-id');
+                    const checkboxes = document.querySelectorAll('.article_checkbox[data-word-id="' + wordId + '"]');
+                    checkboxes.forEach(function(checkbox) {
+                        checkbox.checked = selectAllCheckbox.checked;
+                    });
+                });
+            });
+        </script>
+        
+
           
-              <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-              <script>
-                  var correlationData = {{ correlation_data|safe }};
-                  var words = [...new Set(correlationData.map(d => d.word1).concat(correlationData.map(d => d.word2)))];
-                  var matrix = new Array(words.length).fill(0).map(() => new Array(words.length).fill(0));
           
-                  correlationData.forEach(d => {
-                      var i = words.indexOf(d.word1);
-                      var j = words.indexOf(d.word2);
-                      matrix[i][j] = d.count;
-                  });
-          
-                  var heatmapData = {
-                      z: matrix,
-                      x: words,
-                      y: words,
-                      type: 'heatmap',
-                      colorscale: 'Viridis'
-                  };
-          
-                  Plotly.newPlot('heatmap', [heatmapData], { title: 'Corrélation entre Mots-Clés' });
-              </script>
-          
+        </div>
+    
 
     <script>
         let draggedTask = null;
@@ -490,9 +447,6 @@
             return cookieValue;
         }
     </script>
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 </body>
 </html>
 {% endblock %}
